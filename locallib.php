@@ -214,6 +214,25 @@ class assign_submission_onlyoffice extends assign_submission_plugin {
     }
 
     /**
+     * Lock the format settings once there is a submission for the assignment.
+     * @return bool
+     */
+    private function has_any_submissions(): bool {
+        global $DB;
+        if (!$this->assignment->has_instance()) {
+            return false; // No assignment created yet => no submissions.
+        }
+        // Look to see if any submission files have been created.
+        $context = $this->assignment->get_context();
+        $cond = [
+            'contextid' => $context->id,
+            'component' => onlyoffice::COMPONENT_NAME,
+            'filearea' => onlyoffice::FILEAREA_SUBMISSIONS,
+        ];
+        return $DB->record_exists('files', $cond);
+    }
+
+    /**
      * Get the default settings
      * @param MoodleQuickForm $mform Moodle form object
      * @throws coding_exception
@@ -227,19 +246,22 @@ class assign_submission_onlyoffice extends assign_submission_plugin {
         $height = $config->height ?? 0;
         $width = $config->width ?? 0;
 
+        $hassubmission = $this->has_any_submissions();
+
         // Format section.
         $mform->addElement('select', "{$prefix}_format",
             get_string('format', 'assignsubmission_onlyoffice'), onlyoffice::get_format_menu());
         $mform->setDefault("{$prefix}_format", onlyoffice::FORMAT_UPLOAD);
         $mform->hideIf("{$prefix}_format", "{$prefix}_enabled");
 
-        // Format cannot be changed when the instance has been created.
-        if ($format) {
+        // Format cannot be changed once a submission has been created.
+        if ($hassubmission) {
             $mform->freeze("{$prefix}_format"); // Instance created, freeze format.
+            $mform->addElement('static', "{$prefix}_cannotchange", '', get_string('cannotchange', 'assignsubmission_onlyoffice'));
         }
 
         // For new instances we'll show an empty file picker with no file.
-        if (!$format) {
+        if (!$hassubmission) {
             $mform->addElement('filemanager', "{$prefix}_initialfile_filemanager",
                 get_string('initialfile', 'assignsubmission_onlyoffice'), null,
                 $this->get_default_fileoptions());
@@ -249,14 +271,14 @@ class assign_submission_onlyoffice extends assign_submission_plugin {
 
         // Get the file for an instance that already exists and is using the file upload format.
         // Once the file has been uploaded it cannot be changed.
-        if ($format === onlyoffice::FORMAT_UPLOAD) {
+        if ($hassubmission && $format === onlyoffice::FORMAT_UPLOAD) {
             $mform->addElement('static', "{$prefix}_initialfile",
                 get_string('initialfile', 'assignsubmission_onlyoffice'),
                 $this->get_initial_file_link());
         }
 
         // Add the initial text area when the instance does not already exist or if the format is text.
-        if (!$format || $format === onlyoffice::FORMAT_TEXT) {
+        if (!$hassubmission || $format === onlyoffice::FORMAT_TEXT) {
             $mform->addElement('textarea', "{$prefix}_initialtext", get_string('initialtext', 'assignsubmission_onlyoffice'));
             $mform->setDefault("{$prefix}_initialtext", onlyoffice::get_default_initial_text());
             $mform->hideIf("{$prefix}_initialtext", "{$prefix}_format", 'neq', onlyoffice::FORMAT_TEXT);
@@ -276,6 +298,25 @@ class assign_submission_onlyoffice extends assign_submission_plugin {
         $mform->hideIf("{$prefix}_height", "{$prefix}_enabled");
     }
 
+    public function data_preprocessing(&$defaultvalues) {
+        if (!$this->assignment->has_instance()) {
+            return; // Assignment does not yet exist.
+        }
+        $assign = $this->assignment->get_instance();
+        $context = $this->assignment->get_context();
+        $fieldname = 'assignsubmission_onlyoffice_initialfile';
+        $data = file_prepare_standard_filemanager(
+            (object)$defaultvalues,
+            $fieldname,
+            $this->get_default_fileoptions(),
+            $context,
+            onlyoffice::COMPONENT_NAME,
+            onlyoffice::FILEAREA_INITIAL,
+            $assign->id
+        );
+        $defaultvalues[$fieldname.'_filemanager'] = $data->{$fieldname.'_filemanager'};
+    }
+
     /**
      * Save the settings for submission plugin.
      *
@@ -292,10 +333,7 @@ class assign_submission_onlyoffice extends assign_submission_plugin {
         $this->set_config('height', $height);
 
         // These settings can only be set when the instance doesn't exist.
-        $config = $this->get_config();
-        $alreadycreated = (bool)($config->format ?? false);
-
-        if ($alreadycreated) {
+        if ($this->has_any_submissions()) {
             return true; // Already exists, nothing left for us to do.
         }
 

@@ -24,6 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['cannotchange'] = 'OnlyOffice format settings cannot be changed once a submission has been started';
 $string['defaultformat'] = 'Default format';
 $string['defaultinitialtext'] = 'Default initial text';
 $string['documentserversecret'] = 'Document Server Secret';
@@ -37,6 +38,7 @@ $string['fileareadesc'] = '{$a} files Area';
 $string['format'] = 'OnlyOffice format';
 $string['height'] = 'OnlyOffice height';
 $string['initialfile'] = 'OnlyOffice initial file';
+$string['initialfilemissing'] = 'The teacher who created this assignment did not upload an initial file to start your submission from. You cannot start a submission until this file has been uploaded.';
 $string['initialtext'] = 'OnlyOffice initial text';
 $string['logmessage'] = 'A submission file exists.';
 $string['missingfile'] = 'Missing file';
