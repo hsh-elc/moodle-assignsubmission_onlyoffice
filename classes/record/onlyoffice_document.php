@@ -134,7 +134,7 @@ class onlyoffice_document {
             'submission' => $this->submission->id,
             'userid' => $this->submission->userid ?? 0,
             'groupid' => $this->submission->groupid ?? 0,
-            'documentkey' => $this->generate_document_key(),
+            'documentkey' => self::generate_document_key(),
         ];
 
         $record->id = $DB->insert_record(self::TABLE_DOCUMENT, $record);
@@ -148,7 +148,7 @@ class onlyoffice_document {
      */
     private function update_document_key(string $key = null): void {
         global $DB;
-        $key = $key ?? $this->generate_document_key();
+        $key = $key ?? self::generate_document_key();
         $DB->set_field(self::TABLE_DOCUMENT, 'documentkey', $key, ['id' => $this->documentrecord->id]);
     }
 
@@ -156,9 +156,8 @@ class onlyoffice_document {
      * Generate a document key
      * @return string Newly generated document key
      */
-    private function generate_document_key(): string {
-        $key = random_string(self::DOCUMENT_KEY_LENGTH);
-        return $key;
+    public static function generate_document_key(): string {
+        return random_string(self::DOCUMENT_KEY_LENGTH);
     }
 
     /**

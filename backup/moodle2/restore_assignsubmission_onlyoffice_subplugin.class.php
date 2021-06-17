@@ -64,6 +64,7 @@ class restore_assignsubmission_onlyoffice_subplugin extends restore_subplugin {
         $data->submission = $this->get_mappingid('submission', $data->submission);
         $data->groupid = $data->groupid ? $this->get_mappingid('group', $data->groupid) : 0;
         $data->userid = $data->userid ? $this->get_mappingid('user', $data->userid) : 0;
+        $data->documentkey = \assignsubmission_onlyoffice\record\onlyoffice_document::generate_document_key();
 
         // Add our record.
         $DB->insert_record('assignsubmission_onlyoffice', $data);
